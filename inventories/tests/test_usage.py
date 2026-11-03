@@ -93,7 +93,7 @@ class Build(unittest.TestCase):
                             "SELECT word, pos, axis, value, dictionaries, senses, share FROM label ORDER BY word, value")
             grammar = _query(folder / "g.db",
                              "SELECT word, pos, pattern, senses, examples FROM pattern ORDER BY word, pattern")
-            unread = (folder / "u.tsv").read_text()
+            unread = (folder / "u.tsv").read_text(encoding="utf-8")
         self.assertEqual(labels, [("glim", "NOUN", "register", "informal", '["cald", "oald"]', 2, 0.667),
                                   ("glimmy", "ADJ", "region", "GB", '["cald"]', 1, 1.0)])
         self.assertEqual(grammar, [("glim", "NOUN", "N count", 1, 0), ("glim", "NOUN", "N uncount", 1, 0),

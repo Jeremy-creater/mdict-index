@@ -88,7 +88,7 @@ def jev(record: dict) -> dict[str, float]:
     if record.get("hw"):
         state += f"\nHEADWORD: {clean(record['hw'])}"
     out = subprocess.run(["jev", "docket", "parallel-pair", "--json", "--retries", "5", "--state", state],
-                         capture_output=True, text=True, timeout=120, env={**os.environ, "JEV_HOME": str(JEV_HOME)})
+                         capture_output=True, text=True, timeout=120, env={**os.environ, "JEV_HOME": str(JEV_HOME)}, encoding="utf-8")
     if out.returncode != 0:
         raise RuntimeError(f"jev exited {out.returncode}: {out.stderr.strip()[:300]}")
     answers = json.loads(out.stdout)["answers"]
@@ -139,11 +139,11 @@ def import_labels(labels: dict[str, dict[str, str]], folder: Path) -> int:
     dictionaries' review files, checking each against its screened sample. Returns how many."""
     n = 0
     for id, new in labels.items():
-        judged = [json.loads(line) for line in (folder / f"{id}.jsonl").read_text().splitlines()]
+        judged = [json.loads(line) for line in (folder / f"{id}.jsonl").read_text(encoding="utf-8").splitlines()]
         path = folder / f"{id}.review.json"
-        review = {**(json.loads(path.read_text()) if path.exists() else {}), **new}
+        review = {**(json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}), **new}
         summarize(judged, review)  # raises on a label for an unflagged pair or an unknown value
-        path.write_text(json.dumps(review, ensure_ascii=False, indent=1) + "\n")
+        path.write_text(json.dumps(review, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
         n += len(new)
     return n
 
@@ -184,11 +184,11 @@ def export_verdicts(results: dict, kept: list[dict], staged_dir: Path) -> dict:
 
 def _review(id: str) -> dict[str, str]:
     path = PARALLEL / "audit" / f"{id}.review.json"
-    return json.loads(path.read_text()) if path.exists() else {}
+    return json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
 
 
 def _judged(id: str) -> list[dict]:
-    return [json.loads(line) for line in (PARALLEL / "audit" / f"{id}.jsonl").read_text().splitlines()]
+    return [json.loads(line) for line in (PARALLEL / "audit" / f"{id}.jsonl").read_text(encoding="utf-8").splitlines()]
 
 
 def _excluded(judged: list[dict]) -> frozenset[str]:
@@ -211,8 +211,8 @@ def main() -> None:
     ap.add_argument("--export-verdicts", action="store_true", help="write the shared verdicts from the local audit")
     args = ap.parse_args()
     only = set(filter(None, args.only.split(",")))
-    results = json.loads(args.out.read_text()) if args.out.exists() else {}
-    kept = [c for c in json.loads(args.selected.read_text()) if c["keep"] and (not only or c["id"] in only)]
+    results = json.loads(args.out.read_text(encoding="utf-8")) if args.out.exists() else {}
+    kept = [c for c in json.loads(args.selected.read_text(encoding="utf-8")) if c["keep"] and (not only or c["id"] in only)]
     if args.queue:
         queue = {}
         for c in kept:
@@ -226,15 +226,15 @@ def main() -> None:
         return
     if args.export_verdicts:
         verdicts = export_verdicts(results, kept, PARALLEL / "staged")
-        args.verdicts.write_text(json.dumps(verdicts, ensure_ascii=False, indent=1) + "\n")
+        args.verdicts.write_text(json.dumps(verdicts, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
         print(f"{len(verdicts)} verdicts written to {args.verdicts}", file=sys.stderr)
         return
-    verdicts = json.loads(args.verdicts.read_text()) if args.verdicts.exists() else {}
+    verdicts = json.loads(args.verdicts.read_text(encoding="utf-8")) if args.verdicts.exists() else {}
     has_jev = jev_installed()
     left_out = []
     (PARALLEL / "audit").mkdir(exist_ok=True)
     for f in args.import_labels or []:
-        print(f"{import_labels(json.loads(f.read_text()), PARALLEL / 'audit'):,} labels from {f}", file=sys.stderr)
+        print(f"{import_labels(json.loads(f.read_text(encoding="utf-8")), PARALLEL / 'audit'):,} labels from {f}", file=sys.stderr)
     for c in kept:
         path = PARALLEL / "staged" / f"{c['id']}.jsonl.gz"
         if not path.exists():
@@ -243,7 +243,7 @@ def main() -> None:
         local = (PARALLEL / "audit" / f"{c['id']}.jsonl").exists()
         if not local and not args.redo and (shared := from_verdict(verdicts, c["id"], path)):
             results[c["id"]] = shared
-            args.out.write_text(json.dumps(results, ensure_ascii=False, indent=1) + "\n")
+            args.out.write_text(json.dumps(results, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
             print(f"{shared['precision']:.3f} (shared verdict) {c['name'][:60]}", file=sys.stderr)
             continue
         if not has_jev and (args.redo or not local):
@@ -256,14 +256,14 @@ def main() -> None:
             except NothingToAudit:  # an empty sample replaces the old one, which no later run may reuse
                 judged = []
             (PARALLEL / "audit" / f"{c['id']}.jsonl").write_text(
-                "".join(json.dumps(j, ensure_ascii=False) + "\n" for j in judged))
+                "".join(json.dumps(j, ensure_ascii=False) + "\n" for j in judged), encoding="utf-8")
             (PARALLEL / "audit" / f"{c['id']}.review.json").unlink(missing_ok=True)  # indices changed
         judged = _judged(c["id"])
         summary = summarize(judged, _review(c["id"]), _excluded(judged))
         results[c["id"]] = {**summary, "name": c["name"]}
         if not summary["n"]:  # nothing accepted: recorded as failing, not skipped
             results[c["id"]]["note"] = "no accepted pairs to audit"
-        args.out.write_text(json.dumps(results, ensure_ascii=False, indent=1) + "\n")  # after each: resumable
+        args.out.write_text(json.dumps(results, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")  # after each: resumable
         print(f"{summary['precision']:.3f} ({summary['flagged']} flagged, {summary['reviewed']} reviewed, "
               f"{summary['bad']} bad of {summary['n']}) {c['name'][:60]}", file=sys.stderr)
     if left_out:

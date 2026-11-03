@@ -157,7 +157,7 @@ class Build(unittest.TestCase):
             con.close()
             build([tmp / "a.db"], tmp / "out.db")
             self.assertEqual(export_tsv(tmp / "out.db", tmp / "out.tsv"), 4)  # walks, walked (past, participle), walking
-            lines = (tmp / "out.tsv").read_text().splitlines()
+            lines = (tmp / "out.tsv").read_text(encoding="utf-8").splitlines()
             self.assertEqual(lines[0].split("\t"), ["form", "lemma", "upos", "slot", "region", "kind", "source", "n"])
             self.assertEqual(len(lines), 5)
 

@@ -45,7 +45,7 @@ def python_version(version: tuple[int, ...] = tuple(sys.version_info[:3])) -> Ch
 
 def pinned_packages(requirements: Path = ROOT / "requirements-dev.txt", version=metadata.version) -> Check:
     wrong = []
-    for line in requirements.read_text().splitlines():
+    for line in requirements.read_text(encoding="utf-8").splitlines():
         line = line.split("#", 1)[0].strip()
         if not line:
             continue

@@ -109,13 +109,13 @@ class ImportLabels(unittest.TestCase):
         import json
         with tempfile.TemporaryDirectory() as tmp:
             folder = Path(tmp)
-            (folder / "d.jsonl").write_text("".join(json.dumps({"flagged": f}) + "\n" for f in (True, False, True)))
+            (folder / "d.jsonl").write_text("".join(json.dumps({"flagged": f}) + "\n" for f in (True, False, True)), encoding="utf-8")
             self.assertEqual(import_labels({"d": {"0": "bad"}}, folder), 1)
             self.assertEqual(import_labels({"d": {"2": "good"}}, folder), 1)
-            self.assertEqual(json.loads((folder / "d.review.json").read_text()), {"0": "bad", "2": "good"})
+            self.assertEqual(json.loads((folder / "d.review.json").read_text(encoding="utf-8")), {"0": "bad", "2": "good"})
             with self.assertRaises(ValueError):
                 import_labels({"d": {"1": "good"}}, folder)  # pair 1 was never flagged
-            self.assertEqual(json.loads((folder / "d.review.json").read_text()), {"0": "bad", "2": "good"})
+            self.assertEqual(json.loads((folder / "d.review.json").read_text(encoding="utf-8")), {"0": "bad", "2": "good"})
 
 
 class Main(unittest.TestCase):
@@ -124,7 +124,7 @@ class Main(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.data = Path(self.tmp.name)
-        (self.data / "selected.json").write_text(json.dumps([{"id": "d", "name": "dict d", "keep": True}]))
+        (self.data / "selected.json").write_text(json.dumps([{"id": "d", "name": "dict d", "keep": True}]), encoding="utf-8")
         self.stage(GOOD[:20])
         for patch in (mock.patch.object(audit, "PARALLEL", self.data),
                       mock.patch.object(audit, "jev_installed", lambda: True),
@@ -147,11 +147,11 @@ class Main(unittest.TestCase):
         return out.getvalue()
 
     def results(self):
-        return json.loads((self.data / "audit.json").read_text())
+        return json.loads((self.data / "audit.json").read_text(encoding="utf-8"))
 
     def test_a_rescreen_that_finds_nothing_replaces_the_old_sample(self):
         self.run_main()
-        (self.data / "audit" / "d.review.json").write_text(json.dumps({"3": "good"}))
+        (self.data / "audit" / "d.review.json").write_text(json.dumps({"3": "good"}), encoding="utf-8")
         self.run_main()
         self.assertEqual(self.results()["d"]["precision"], 1.0)
         self.stage([INVALID])                      # the dictionary now has nothing the rules accept
@@ -202,7 +202,7 @@ class Main(unittest.TestCase):
     def test_exported_verdicts_hold_no_text(self):
         self.run_main()
         self.run_main("--export-verdicts")
-        verdict = json.loads((self.data / "verdicts.json").read_text())["d"]
+        verdict = json.loads((self.data / "verdicts.json").read_text(encoding="utf-8"))["d"]
         self.assertEqual(set(verdict), {"name", "staged_sha256", *audit.SUMMARY})
         self.assertNotIn("window", json.dumps(verdict))
 
@@ -214,14 +214,14 @@ class Main(unittest.TestCase):
 
     def test_the_queue_leaves_out_pairs_the_rules_now_reject(self):
         self.run_main()
-        judged = [json.loads(line) for line in (self.data / "audit" / "d.jsonl").read_text().splitlines()]
+        judged = [json.loads(line) for line in (self.data / "audit" / "d.jsonl").read_text(encoding="utf-8").splitlines()]
         flagged = [i for i, j in enumerate(judged) if j["flagged"]]
         self.assertEqual(len(flagged), 1)
         # more flags, one of them on a pair the current rules reject
         judged[0] = {**INVALID, **scores(0.2), "flagged": True}
         for i in (1, 2, 4):
             judged[i] = {**judged[i], "usable": 0.2, "flagged": True}
-        (self.data / "audit" / "d.jsonl").write_text("".join(json.dumps(j, ensure_ascii=False) + "\n" for j in judged))
+        (self.data / "audit" / "d.jsonl").write_text("".join(json.dumps(j, ensure_ascii=False) + "\n" for j in judged), encoding="utf-8")
         self.run_main()
         queue = json.loads(self.run_main("--queue"))
         self.assertTrue(queue["d"]["pairs"])

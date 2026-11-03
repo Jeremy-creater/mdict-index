@@ -208,12 +208,12 @@ class Main(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             out, redo = Path(tmp) / "probe.jsonl", Path(tmp) / "redo.json"
             rows = '{"id": "a", "status": "ok"}\n{"id": "b", "status": "error"}\n'
-            out.write_text(rows)
-            redo.write_text('["a"]')
+            out.write_text(rows, encoding="utf-8")
+            redo.write_text('["a"]', encoding="utf-8")
             missing = FileNotFoundError("lexicon.json.gz: build it first")
             with mock.patch("parallel.lexicon._lexicon", side_effect=missing), self.assertRaises(FileNotFoundError):
                 self.run_main(out, "--redo", str(redo), "--retry-errors")
-            self.assertEqual(out.read_text(), rows)
+            self.assertEqual(out.read_text(encoding="utf-8"), rows)
 
     FOUND = [{"id": i, "name": f"dict {i}"} for i in "abc"]
     ROWS = "".join(json.dumps({"id": i, "name": f"dict {i}", "status": "ok", "pairs": 1}) + "\n" for i in "abc")
@@ -236,11 +236,11 @@ class Main(unittest.TestCase):
         self.patched(run_one)
         with tempfile.TemporaryDirectory() as tmp:
             out, redo = Path(tmp) / "probe.jsonl", Path(tmp) / "redo.json"
-            out.write_text(self.ROWS)
-            redo.write_text('["a", "b"]')
+            out.write_text(self.ROWS, encoding="utf-8")
+            redo.write_text('["a", "b"]', encoding="utf-8")
             with self.assertRaises(RuntimeError):
                 self.run_main(out, "--redo", str(redo), "--jobs", "1")
-            self.assertEqual(out.read_text(), self.ROWS)  # a and b were good rows: both are still there
+            self.assertEqual(out.read_text(encoding="utf-8"), self.ROWS)  # a and b were good rows: both are still there
 
     def test_an_interrupted_run_is_continued_from_its_journal(self):
         probed = []
@@ -251,13 +251,13 @@ class Main(unittest.TestCase):
         self.patched(run_one)
         with tempfile.TemporaryDirectory() as tmp:
             out, redo = Path(tmp) / "probe.jsonl", Path(tmp) / "redo.json"
-            out.write_text(self.ROWS)
-            redo.write_text('["a", "b"]')
+            out.write_text(self.ROWS, encoding="utf-8")
+            redo.write_text('["a", "b"]', encoding="utf-8")
             # what a run stopped while writing b's result leaves behind
             (Path(tmp) / "probe.jsonl.journal").write_text(
-                json.dumps({"id": "a", "name": "dict a", "status": "ok", "pairs": 7}) + '\n{"id": "b", "na')
+                json.dumps({"id": "a", "name": "dict a", "status": "ok", "pairs": 7}) + '\n{"id": "b", "na', encoding="utf-8")
             self.run_main(out, "--redo", str(redo))
-            rows = [json.loads(line) for line in out.read_text().splitlines()]
+            rows = [json.loads(line) for line in out.read_text(encoding="utf-8").splitlines()]
             self.assertEqual(probed, ["b"])
             self.assertEqual({r["id"]: r["pairs"] for r in rows}, {"a": 7, "b": 10, "c": 1})
             self.assertEqual(len(rows), 3)
@@ -268,13 +268,13 @@ class Main(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             out = Path(tmp) / "data" / "probe.jsonl"
             self.run_main(out)
-            self.assertEqual(sorted(json.loads(line)["id"] for line in out.read_text().splitlines()), ["a", "b", "c"])
-            first = out.read_text()
+            self.assertEqual(sorted(json.loads(line)["id"] for line in out.read_text(encoding="utf-8").splitlines()), ["a", "b", "c"])
+            first = out.read_text(encoding="utf-8")
             self.run_main(out)                    # nothing left to do: nothing changes
-            self.assertEqual(out.read_text(), first)
+            self.assertEqual(out.read_text(encoding="utf-8"), first)
             self.patched(lambda c, n_blocks, lexicon: {**c, "status": "ok", "pairs": 20})
             self.run_main(out, "--retry-errors")  # only the failed one is probed again
-            self.assertEqual({r["id"]: r["pairs"] for r in map(json.loads, out.read_text().splitlines())},
+            self.assertEqual({r["id"]: r["pairs"] for r in map(json.loads, out.read_text(encoding="utf-8").splitlines())},
                              {"a": 10, "b": 20, "c": 10})
 
     def test_the_block_count_must_be_positive(self):

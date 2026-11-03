@@ -78,11 +78,11 @@ class Main(unittest.TestCase):
             out = Path(tmp) / "index.jsonl"
             # A file at the old fixed temporary name (another crawl's) must be left alone.
             other = Path(str(out) + ".tmp")
-            other.write_text("another crawl\n")
+            other.write_text("another crawl\n", encoding="utf-8")
             with mock.patch.object(crawl_index, "list_dir", return_value=([], [{"path": "A.mdx", "size": 1, "date": "d"}])):
                 crawl_index.main(str(out))
-            self.assertEqual([json.loads(line)["path"] for line in out.read_text().splitlines()], ["A.mdx"])
-            self.assertEqual(other.read_text(), "another crawl\n")
+            self.assertEqual([json.loads(line)["path"] for line in out.read_text(encoding="utf-8").splitlines()], ["A.mdx"])
+            self.assertEqual(other.read_text(encoding="utf-8"), "another crawl\n")
             self.assertEqual(sorted(p.name for p in Path(tmp).iterdir()), ["index.jsonl", "index.jsonl.tmp"])
             self.assertEqual(out.stat().st_mode & 0o044, 0o044)  # not mkstemp's private 0600
 

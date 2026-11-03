@@ -276,14 +276,14 @@ def to_json(rid: str, r: Record, fold, first_seen: str | None) -> dict:
 
 
 def load_json(path: Path):
-    return json.loads(path.read_text()) if path.exists() else None
+    return json.loads(path.read_text(encoding="utf-8")) if path.exists() else None
 
 
 def build(index_path: Path, out_dir: Path, t2s_path: Path, today: str, recommended_path: Path | None = None) -> dict:
-    rows = [json.loads(line) for line in index_path.read_text().splitlines() if line]
+    rows = [json.loads(line) for line in index_path.read_text(encoding="utf-8").splitlines() if line]
     if not rows:
         raise SystemExit(f"{index_path} is empty; refusing to build")
-    fold = make_fold(json.loads(t2s_path.read_text()))
+    fold = make_fold(json.loads(t2s_path.read_text(encoding="utf-8")))
     records = build_records(rows)
 
     prev_dicts = load_json(out_dir / "dicts.json")
@@ -327,7 +327,7 @@ def build(index_path: Path, out_dir: Path, t2s_path: Path, today: str, recommend
 
     recommended = None
     if recommended_path is not None:
-        recommended, warnings = resolve_recommended(json.loads(recommended_path.read_text()), dicts)
+        recommended, warnings = resolve_recommended(json.loads(recommended_path.read_text(encoding="utf-8")), dicts)
         prefix = "::warning::" if os.environ.get("GITHUB_ACTIONS") else "WARNING: "
         for w in warnings:
             print(prefix + w, file=sys.stderr)
@@ -344,7 +344,7 @@ def _write_atomic(path: Path, text: str) -> None:
     # A private temporary file: two builds writing at once must not share one.
     fd, tmp = tempfile.mkstemp(dir=path.parent, prefix=f".{path.name}-", suffix=".tmp")
     try:
-        with os.fdopen(fd, "w") as out:
+        with os.fdopen(fd, "w", encoding="utf-8") as out:
             out.write(text)
         os.chmod(tmp, 0o666 & ~_UMASK)  # mkstemp creates 0600; the site is published as-is
         os.replace(tmp, path)

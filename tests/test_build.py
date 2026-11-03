@@ -144,9 +144,9 @@ class Tracking(unittest.TestCase):
         self.tmp.cleanup()
 
     def run_build(self, paths, today):
-        self.index.write_text("".join(json.dumps(row(p)) + "\n" for p in paths))
+        self.index.write_text("".join(json.dumps(row(p)) + "\n" for p in paths), encoding="utf-8")
         meta = build(self.index, self.out, self.t2s, today)
-        return meta, json.loads((self.out / "dicts.json").read_text())
+        return meta, json.loads((self.out / "dicts.json").read_text(encoding="utf-8"))
 
     def test_first_build_is_baseline_then_new_records_get_first_seen(self):
         base = [f"d/D{i}.mdx" for i in range(10)]
@@ -172,14 +172,14 @@ class Tracking(unittest.TestCase):
             {"id": rid, "k": k, "n": n, "l": "unknown", "b": [], "a": [], "s": 1, "d": "2024-01-01",
              "loc": [{"p": "d", "f": files}], **({"fs": fs} if fs else {})}
             for rid, k, n, files, fs in records
-        ]))
+        ]), encoding="utf-8")
 
     def test_records_reidentified_by_a_rule_change_keep_their_history(self):
         # The previous build ran older rules: other ids, other names, other groupings.
         # A record whose main file was published before is not new, whatever it was called.
         base = [f"d/D{i}.mdx" for i in range(10)]
         self.run_build(base, "2026-01-01")
-        old = json.loads((self.out / "dicts.json").read_text())
+        old = json.loads((self.out / "dicts.json").read_text(encoding="utf-8"))
         self.publish_as(
             [(d["id"], d["k"], d["n"], d["loc"][0]["f"], None) for d in old]
             + [
@@ -201,7 +201,7 @@ class Tracking(unittest.TestCase):
 
     def test_a_record_none_of_whose_main_files_survives_is_removed(self):
         self.run_build([f"d/D{i}.mdx" for i in range(10)], "2026-01-01")
-        old = json.loads((self.out / "dicts.json").read_text())
+        old = json.loads((self.out / "dicts.json").read_text(encoding="utf-8"))
         self.publish_as([(d["id"], d["k"], d["n"], d["loc"][0]["f"], None) for d in old]
                         + [("old-gone", "mdx", "Gone", [["Gone.mdx", 100], ["D0.css", 100]], None)])
         meta, _ = self.run_build([f"d/D{i}.mdx" for i in range(10)] + ["d/D0.css"], "2026-01-08")
@@ -209,23 +209,23 @@ class Tracking(unittest.TestCase):
 
     def test_large_shrink_is_refused_and_previous_output_kept(self):
         self.run_build([f"d/D{i}.mdx" for i in range(10)], "2026-01-01")
-        before = (self.out / "dicts.json").read_text()
+        before = (self.out / "dicts.json").read_text(encoding="utf-8")
         with self.assertRaises(SystemExit):
             self.run_build(["d/D0.mdx"], "2026-01-08")
-        self.assertEqual((self.out / "dicts.json").read_text(), before)
+        self.assertEqual((self.out / "dicts.json").read_text(encoding="utf-8"), before)
 
     def test_outputs_are_written_through_private_temporary_files(self):
         # A file at a fixed temporary name (another build's) must be left alone.
         self.out.mkdir()
         other = self.out / "dicts.json.tmp"
-        other.write_text("another build")
+        other.write_text("another build", encoding="utf-8")
         self.run_build([f"d/D{i}.mdx" for i in range(3)], "2026-01-01")
-        self.assertEqual(other.read_text(), "another build")
+        self.assertEqual(other.read_text(encoding="utf-8"), "another build")
         self.assertEqual(sorted(p.name for p in self.out.iterdir()), ["dicts.json", "dicts.json.tmp", "meta.json"])
         self.assertEqual((self.out / "dicts.json").stat().st_mode & 0o044, 0o044)  # readable when published
 
     def test_empty_index_is_refused(self):
-        self.index.write_text("")
+        self.index.write_text("", encoding="utf-8")
         with self.assertRaises(SystemExit):
             build(self.index, self.out, self.t2s, "2026-01-01")
 
@@ -280,8 +280,8 @@ class Recommended(unittest.TestCase):
 
     def test_committed_curation_resolves_every_pick_exactly(self):
         # Catches typos in data/recommended.json against the committed index.
-        dicts = json.loads((ROOT / "site" / "data" / "dicts.json").read_text())
-        cur = json.loads((ROOT / "data" / "recommended.json").read_text())
+        dicts = json.loads((ROOT / "site" / "data" / "dicts.json").read_text(encoding="utf-8"))
+        cur = json.loads((ROOT / "data" / "recommended.json").read_text(encoding="utf-8"))
         out, warnings = resolve_recommended(cur, dicts)
         self.assertEqual(warnings, [])
         for cat in out["categories"]:

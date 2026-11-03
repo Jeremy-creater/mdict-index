@@ -83,7 +83,7 @@ class ExportFile(unittest.TestCase):
         db = self.database("p.db")
         out = self.dir / "out.jsonl"
         self.assertEqual(export(db, "jsonl", out), 1)
-        self.assertEqual(json.loads(out.read_text())["sources"], ["Dict A | B"])
+        self.assertEqual(json.loads(out.read_text(encoding="utf-8"))["sources"], ["Dict A | B"])
 
     def test_the_output_must_not_be_the_database(self):
         db = self.database("p.db")
@@ -97,15 +97,15 @@ class ExportFile(unittest.TestCase):
         self.database("odd", dictionary="the wrong one")  # what "file:.../odd?name#1.db" would open instead
         out = self.dir / "out.jsonl"
         self.assertEqual(export(db, "jsonl", out), 1)
-        self.assertEqual(json.loads(out.read_text())["sources"], ["the right one"])
+        self.assertEqual(json.loads(out.read_text(encoding="utf-8"))["sources"], ["the right one"])
 
     def test_the_working_file_is_private_to_this_export(self):
         db = self.database("p.db")
         out = self.dir / "out.tsv"
         other = self.dir / "out.tsv.part"   # what a concurrent export of the same output used to share
-        other.write_text("another export")
+        other.write_text("another export", encoding="utf-8")
         export(db, "tsv", out)
-        self.assertEqual(other.read_text(), "another export")
+        self.assertEqual(other.read_text(encoding="utf-8"), "another export")
         self.assertEqual(sorted(p.name for p in self.dir.glob("out.tsv*")), ["out.tsv", "out.tsv.part"])
 
     def test_a_failed_export_leaves_no_working_file(self):

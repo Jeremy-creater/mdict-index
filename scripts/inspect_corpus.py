@@ -144,7 +144,7 @@ def inspect_key(key: str) -> dict:
     for m in out["mdx"]:
         for word, htmls in m.pop("_samples").items():
             for i, html in enumerate(htmls):
-                (sample_dir / f"sample-{word}-{i}.html").write_text(html)
+                (sample_dir / f"sample-{word}-{i}.html").write_text(html, encoding="utf-8")
     out["seconds"] = round(time.time() - t0, 1)
     return out
 
@@ -171,9 +171,9 @@ def main() -> None:
             print(f"{status}{k:11} {entries:>9,} entries  {r['seconds']:>6}s  {'; '.join(r['errors'])}", file=sys.stderr)
     report_path = OUT / "report.json"
     # --only re-inspects some dictionaries: the others keep their entries (build_unified.py reads them all).
-    report = json.loads(report_path.read_text()) if only and report_path.exists() else {}
+    report = json.loads(report_path.read_text(encoding="utf-8")) if only and report_path.exists() else {}
     report.update(results)
-    report_path.write_text(json.dumps(dict(sorted(report.items())), ensure_ascii=False, indent=1))
+    report_path.write_text(json.dumps(dict(sorted(report.items())), ensure_ascii=False, indent=1), encoding="utf-8")
     if any(r["errors"] for r in results.values()):
         sys.exit("some dictionaries could not be read; see report.json")
 

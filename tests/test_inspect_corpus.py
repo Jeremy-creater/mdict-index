@@ -59,7 +59,7 @@ class Main(unittest.TestCase):
     def test_only_updates_its_keys_and_keeps_the_rest_of_the_report(self):
         self.run_main()
         self.run_main("--only", "b")
-        self.assertEqual(sorted(json.loads(self.report.read_text())), ["a", "b"])
+        self.assertEqual(sorted(json.loads(self.report.read_text(encoding="utf-8"))), ["a", "b"])
 
     def test_unknown_only_keys_are_rejected(self):
         with self.assertRaises(SystemExit) as stop:

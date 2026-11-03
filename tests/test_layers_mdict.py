@@ -33,8 +33,8 @@ class Layer1(unittest.TestCase):
         self.tmp = tempfile.TemporaryDirectory()
         self.dir = Path(self.tmp.name)
         write(self.dir / "a.mdx", {"take": "<b>take</b> 拿", "took": "@@@LINK=take", "Café": "<i>cafe</i>", "blank": " "})
-        (self.dir / "a.css").write_text(".b{color:red}")
-        (self.dir / "a.js").write_text("var x = 1;")
+        (self.dir / "a.css").write_text(".b{color:red}", encoding="utf-8")
+        (self.dir / "a.js").write_text("var x = 1;", encoding="utf-8")
         self.conn = sqlite3.connect(":memory:")
         self.addCleanup(self.conn.close)
         self.conn.executescript(SCHEMA)
@@ -68,9 +68,9 @@ class Layer1(unittest.TestCase):
         folder = self.dir / "themed"
         folder.mkdir()
         write(folder / "t.mdx", {"take": '<link rel="stylesheet" href="t.css"><b>take</b>'})
-        (folder / "t.css").write_text(".b{color:red}")
-        (folder / "t.dark.css").write_text(".b{color:white}")
-        (folder / "jquery.js").write_text("var jq = 1;")  # linked as "t.js", which the pack does not ship
+        (folder / "t.css").write_text(".b{color:red}", encoding="utf-8")
+        (folder / "t.dark.css").write_text(".b{color:white}", encoding="utf-8")
+        (folder / "jquery.js").write_text("var jq = 1;", encoding="utf-8")  # linked as "t.js", which the pack does not ship
         load(self.conn, 1, ITEM, "cat", RECORD, {"content_entries": 1, "redirects": 0, "empty": 0}, folder=folder)
         css, js = self.conn.execute("SELECT stylesheet, script FROM dictionary").fetchone()
         self.assertIn(".b{color:red}", css)

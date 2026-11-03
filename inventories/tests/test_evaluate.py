@@ -19,10 +19,10 @@ from inventory.evaluate import (_collocation_item, _fresh, _label_inputs, colloc
 class Load(unittest.TestCase):
     def test_a_file_that_is_not_gold_is_refused_clearly(self):
         with tempfile.TemporaryDirectory() as tmp:
-            Path(tmp, "x.jsonl").write_text(json.dumps({"text": "glim", "kind": "idiom"}) + "\n")
+            Path(tmp, "x.jsonl").write_text(json.dumps({"text": "glim", "kind": "idiom"}) + "\n", encoding="utf-8")
             with self.assertRaisesRegex(ValueError, "not a gold item"):
                 load(Path(tmp))
-            Path(tmp, "x.jsonl").write_text(json.dumps({"inventory": "notation", "input": {"printed": "glim"}}) + "\n")
+            Path(tmp, "x.jsonl").write_text(json.dumps({"inventory": "notation", "input": {"printed": "glim"}}) + "\n", encoding="utf-8")
             with self.assertRaisesRegex(ValueError, "not a gold item"):   # no "expected"
                 load(Path(tmp))
 
@@ -50,10 +50,10 @@ class HeldOut(unittest.TestCase):
             gold = Path(tmp)
             (gold / "heldout").mkdir()
             (gold / "heldout2").mkdir()
-            (gold / "label.jsonl").write_text(label("informal") + "\n")
-            (gold / "heldout" / "label.jsonl").write_text(label("informal") + "\n" + label("infml") + "\n")
+            (gold / "label.jsonl").write_text(label("informal") + "\n", encoding="utf-8")
+            (gold / "heldout" / "label.jsonl").write_text(label("informal") + "\n" + label("infml") + "\n", encoding="utf-8")
             # the first held-out set was used to fix rules before the second was drawn
-            (gold / "heldout2" / "label.jsonl").write_text(label("infml") + "\n" + label("inf") + "\n")
+            (gold / "heldout2" / "label.jsonl").write_text(label("infml") + "\n" + label("inf") + "\n", encoding="utf-8")
             out = io.StringIO()
             with mock.patch.object(evaluate, "GOLD", gold), mock.patch.object(evaluate, "context", dict), \
                     mock.patch.object(sys, "argv", ["evaluate.py"]), redirect_stdout(out):
@@ -76,10 +76,10 @@ class Sampling(unittest.TestCase):
             gold = Path(tmp)
             (gold / "heldout" / "candidates").mkdir(parents=True)
             item = lambda label: json.dumps({"inventory": "label", "input": {"label": label, "uses": 9}, "expected": []})
-            (gold / "label.jsonl").write_text(item("glim") + "\n")                        # training gold
-            (gold / "heldout" / "label.jsonl").write_text(item("glum") + "\n")           # this sample's own gold
-            (gold / "heldout" / "candidates" / "label.jsonl").write_text(item("glimmer") + "\n")
-            (gold / "notes.jsonl").write_text(json.dumps({"text": "glim", "kind": "idiom"}) + "\n")  # not gold items
+            (gold / "label.jsonl").write_text(item("glim") + "\n", encoding="utf-8")                        # training gold
+            (gold / "heldout" / "label.jsonl").write_text(item("glum") + "\n", encoding="utf-8")           # this sample's own gold
+            (gold / "heldout" / "candidates" / "label.jsonl").write_text(item("glimmer") + "\n", encoding="utf-8")
+            (gold / "notes.jsonl").write_text(json.dumps({"text": "glim", "kind": "idiom"}) + "\n", encoding="utf-8")  # not gold items
             known = known_inputs(gold, gold / "heldout" / "candidates")
             self.assertEqual(dict(known), {"label": {json.dumps("glim")}})
             uses = Counter({"glim": 100, "glum": 50, "glimmer": 10})
@@ -96,7 +96,7 @@ class Sampling(unittest.TestCase):
                       {**record, "side": "", "printed": "glorp to the glim"},      # read: words between it and the base
                       {**record, "side": "", "printed": "glim of the glump"}]
             (gold / "collocation.jsonl").write_text("".join(json.dumps(
-                {"inventory": "collocation", "input": {"raw": r}, "expected": {}}) + "\n" for r in stored))
+                {"inventory": "collocation", "input": {"raw": r}, "expected": {}}) + "\n" for r in stored), encoding="utf-8")
             known = known_inputs(gold, gold / "heldout" / "candidates")
         drawn = [_collocation_item(Corpus(Raw(**unread(p)["raw"]), ("...",))) for p in
                  ("glarp", "glorp", "glump", "the glump", "glurp")]

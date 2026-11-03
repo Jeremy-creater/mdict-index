@@ -21,7 +21,6 @@ Sources:
 from __future__ import annotations
 
 import argparse
-import fcntl
 import gzip
 import json
 import os
@@ -32,6 +31,12 @@ import uuid
 from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor, as_completed
 from collections.abc import Iterator
 from pathlib import Path
+
+try:
+    import fcntl
+except ImportError:  # Windows
+    fcntl = None
+    import msvcrt
 
 ROOT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
@@ -120,6 +125,19 @@ def lock_path(out: Path) -> Path:
     return out.with_name("." + out.name.removesuffix(".jsonl.gz") + ".lock")
 
 
+def hold(lock) -> None:
+    """Wait for, then take, the exclusive lock on the open file lock; it is released when the file is closed."""
+    if fcntl:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        return
+    lock.seek(0)  # Windows locks a byte range: always the first byte, so every run contends for the same one
+    while True:
+        try:
+            return msvcrt.locking(lock.fileno(), msvcrt.LK_LOCK, 1)
+        except OSError:  # LK_LOCK gives up after ten seconds; flock waits as long as it takes
+            continue
+
+
 def stage(records: Iterator[dict], out: Path, styles: dict[str, tuple[int, int]] | None = None) -> int:
     """Write records to out atomically; returns how many. A failed run leaves no partial file.
 
@@ -143,9 +161,9 @@ def stage(records: Iterator[dict], out: Path, styles: dict[str, tuple[int, int]]
                 n += 1
         if styles is not None:
             styles_tmp.write_text(json.dumps({k: {"example_hits": e, "definition_hits": d} for k, (e, d) in styles.items()},
-                                             indent=1) + "\n")
-        with open(lock_path(out), "a") as lock:
-            fcntl.flock(lock, fcntl.LOCK_EX)  # released when the file is closed
+                                             indent=1) + "\n", encoding="utf-8")
+        with open(lock_path(out), "a", encoding="utf-8") as lock:
+            hold(lock)
             styles_out.unlink(missing_ok=True)
             os.replace(tmp, out)
             if styles is not None:
@@ -207,7 +225,7 @@ def main() -> None:
     ap.add_argument("--download-jobs", type=int, default=4)
     args = ap.parse_args()
     only = set(filter(None, args.only.split(",")))
-    kept = [c for c in json.loads(args.selected.read_text()) if c["keep"]]
+    kept = [c for c in json.loads(args.selected.read_text(encoding="utf-8")) if c["keep"]]
     todo = [c for c in kept if (not only or c["id"] in only) and (not args.source or c["source"] == args.source)]
     if only - {c["id"] for c in todo}:
         sys.exit(f"not kept in {args.selected}: {sorted(only - {c['id'] for c in todo})}")

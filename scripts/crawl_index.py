@@ -132,7 +132,7 @@ def main(out_path: str) -> None:
     # A private temporary file: two crawls writing at once must not share one.
     fd, tmp = tempfile.mkstemp(dir=os.path.dirname(os.path.abspath(out_path)), prefix=".index-", suffix=".tmp")
     try:
-        with os.fdopen(fd, "w") as out:
+        with os.fdopen(fd, "w", encoding="utf-8") as out:
             for f in entries:
                 out.write(json.dumps(f, ensure_ascii=False) + "\n")
         os.chmod(tmp, 0o666 & ~_UMASK)  # mkstemp creates 0600; keep the usual file mode

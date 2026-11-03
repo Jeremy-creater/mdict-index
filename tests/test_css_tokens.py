@@ -17,7 +17,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 def _css(path):
-    return re.sub(r"/\*.*?\*/", "", path.read_text(), flags=re.S)
+    return re.sub(r"/\*.*?\*/", "", path.read_text(encoding="utf-8"), flags=re.S)
 
 
 # site/tokens.css holds the design tokens (and the contrast-checked colours); the site's
@@ -27,9 +27,9 @@ CSS = _css(ROOT / "site" / "style.css")
 STYLESHEETS = {"site/tokens.css": TOKENS, "site/style.css": CSS,
                "scripts/lookup_ui/lookup.css": _css(ROOT / "scripts" / "lookup_ui" / "lookup.css")}
 ALL_CSS = "\n".join(STYLESHEETS.values())
-HTML = {p: (ROOT / p).read_text() for p in ("site/index.html", "scripts/lookup_ui/index.html",
+HTML = {p: (ROOT / p).read_text(encoding="utf-8") for p in ("site/index.html", "scripts/lookup_ui/index.html",
                                              "scripts/lookup_ui/analyze.html")}
-JS = {p: (ROOT / p).read_text() for p in ("site/app.js", "site/view.js", "site/tabs.js", "scripts/lookup_ui/lookup.js",
+JS = {p: (ROOT / p).read_text(encoding="utf-8") for p in ("site/app.js", "site/view.js", "site/tabs.js", "scripts/lookup_ui/lookup.js",
                                          "scripts/lookup_ui/render.js", "scripts/lookup_ui/analyze.js",
                                          "scripts/lookup_ui/analysis.js")}
 

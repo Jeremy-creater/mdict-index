@@ -94,7 +94,7 @@ EXTRACTORS = Path(__file__).resolve().parent / "extractors.json"
 
 def extractor_overrides(path: Path = EXTRACTORS) -> dict[str, dict]:
     """Dictionary id -> {"extractor", "truth"} for those not read by the generic extractor."""
-    return {k: v for k, v in json.loads(path.read_text()).items() if not k.startswith("_")}
+    return {k: v for k, v in json.loads(path.read_text(encoding="utf-8")).items() if not k.startswith("_")}
 
 
 def with_extractor(choice: Choice, overrides: dict[str, dict]) -> Choice:
@@ -111,7 +111,7 @@ def parsed_dictionaries() -> dict[str, str]:
     """Dictionary id -> parser key, for the recommendations that have a layer-2 parser."""
     from structured.parsers import registry
     parsers = registry()
-    rec = json.loads((ROOT / "site" / "data" / "recommended.json").read_text())
+    rec = json.loads((ROOT / "site" / "data" / "recommended.json").read_text(encoding="utf-8"))
     return {item["id"]: item["key"] for cat in rec["categories"] for item in cat["items"]
             if item["id"] and item["key"] in parsers}
 
@@ -127,7 +127,7 @@ def main() -> None:
     ap.add_argument("--probe", type=Path, default=DATA / "probe.jsonl")
     ap.add_argument("--out", type=Path, default=DATA / "selected.json")
     args = ap.parse_args()
-    rows = [json.loads(line) for line in args.probe.read_text().splitlines()]
+    rows = [json.loads(line) for line in args.probe.read_text(encoding="utf-8").splitlines()]
     ids = [r["id"] for r in rows]
     if len(ids) != len(set(ids)):
         sys.exit(f"{args.probe}: duplicate dictionary ids; rerun the probe with --retry-errors to rewrite it")
@@ -136,7 +136,7 @@ def main() -> None:
     choices = sorted((with_extractor(choose(r, parsed), overrides) for r in rows), key=lambda c: (not c.keep, -c.alignment))
     if twice := kept_twice(choices):
         sys.exit(f"{len(twice)} files kept under two ids (stale probe rows?), e.g. {twice[0]}")
-    args.out.write_text(json.dumps([asdict(c) for c in choices], ensure_ascii=False, indent=1) + "\n")
+    args.out.write_text(json.dumps([asdict(c) for c in choices], ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
     kept = [c for c in choices if c.keep]
     download = [c for c in kept if c.source == "download"]
     print(f"{len(rows)} probed: {len(kept)} kept ({len(kept) - len(download)} already parsed, "

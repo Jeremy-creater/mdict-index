@@ -34,8 +34,8 @@ def file_url(folder: str, name: str) -> str:
 
 
 def plan(max_mdd: int, only: set[str] | None) -> list[dict]:
-    dicts = {d["id"]: d for d in json.loads((ROOT / "site/data/dicts.json").read_text())}
-    rec = json.loads((ROOT / "site/data/recommended.json").read_text())
+    dicts = {d["id"]: d for d in json.loads((ROOT / "site/data/dicts.json").read_text(encoding="utf-8"))}
+    rec = json.loads((ROOT / "site/data/recommended.json").read_text(encoding="utf-8"))
     known = {item["key"] for cat in rec["categories"] for item in cat["items"] if item["id"] is not None}
     if only and (unknown := sorted(only - known)):
         raise SystemExit(f"--only: no recommended dictionary {unknown}; known: {', '.join(sorted(known))}")
@@ -92,7 +92,7 @@ def main() -> None:
                 failures.append(f"{job['key']}/{job['name']}: {e}")
                 print(f"FAIL {job['key']}/{job['name']}: {e}", file=sys.stderr)
 
-    (CORPUS / "manifest.json").write_text(json.dumps(jobs, ensure_ascii=False, indent=1))
+    (CORPUS / "manifest.json").write_text(json.dumps(jobs, ensure_ascii=False, indent=1), encoding="utf-8")
     if failures:
         sys.exit(f"{len(failures)} downloads failed")
 

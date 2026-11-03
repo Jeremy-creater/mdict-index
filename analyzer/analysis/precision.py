@@ -71,7 +71,7 @@ def state(record: dict) -> str:
 
 def ask(record: dict) -> float:
     out = subprocess.run(["jev", "docket", "analyzer-span", "--json", "--retries", "5", "--state", state(record)],
-                         capture_output=True, text=True, timeout=120, env={**os.environ, "JEV_HOME": str(JEV_HOME)})
+                         capture_output=True, text=True, timeout=120, env={**os.environ, "JEV_HOME": str(JEV_HOME)}, encoding="utf-8")
     if out.returncode != 0:
         raise RuntimeError(f"jev exited {out.returncode}: {out.stderr.strip()[:300]}")
     return float(json.loads(out.stdout)["answers"]["correct"]["noul"])
@@ -110,17 +110,17 @@ def main() -> None:
     sample = [s for src in sorted(by_source)
               for s in random.Random(f"{args.seed}:{src}").sample(by_source[src], min(args.n, len(by_source[src])))]
     answers_path, review_path = OUT / "answers.json", OUT / "review.json"
-    answers = json.loads(answers_path.read_text()) if answers_path.exists() else {}
+    answers = json.loads(answers_path.read_text(encoding="utf-8")) if answers_path.exists() else {}
     todo = [s for s in sample if s["key"] not in answers]
     try:
         with ThreadPoolExecutor(8) as pool:
             for s, score in zip(todo, pool.map(ask, todo)):
                 answers[s["key"]] = score
     finally:
-        answers_path.write_text(json.dumps(answers, indent=1) + "\n")
-    review = json.loads(review_path.read_text()) if review_path.exists() else {}
+        answers_path.write_text(json.dumps(answers, indent=1) + "\n", encoding="utf-8")
+    review = json.loads(review_path.read_text(encoding="utf-8")) if review_path.exists() else {}
     (OUT / "sample.jsonl").write_text("".join(json.dumps({**s, "score": answers[s["key"]]}, ensure_ascii=False) + "\n"
-                                              for s in sample))
+                                              for s in sample), encoding="utf-8")
     flagged = [s for s in sample if answers[s["key"]] < SCREEN]
     if args.audit_queue:
         passed = [s for s in sample if answers[s["key"]] >= SCREEN and s["key"] not in review]

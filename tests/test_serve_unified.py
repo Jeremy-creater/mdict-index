@@ -167,7 +167,7 @@ class ServerApp(unittest.TestCase):
             self.assertIn(str(db).encode(), body)  # this server's database, not the default one
             import subprocess, sys
             done = subprocess.run([sys.executable, str(Path(__file__).resolve().parent.parent / "scripts" / "build_structured.py"),
-                                   "--db", str(db), "--derived-only"], capture_output=True, text=True)
+                                   "--db", str(db), "--derived-only"], capture_output=True, text=True, encoding="utf-8")
             self.assertEqual(done.returncode, 0, done.stderr)
             self.assertEqual(App(db, res).handle("/api/zh?q=" + urllib.parse.quote("招呼"))[0], 200)
 

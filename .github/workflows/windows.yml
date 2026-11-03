@@ -1,0 +1,50 @@
+name: Windows tests
+
+# The test suites on Windows, whose locale encoding (cp1252, GBK) is not UTF-8 and which has no fcntl.
+# Corpus-backed tests skip here, as on Linux: the dictionaries are never in the repository.
+on:
+  push:
+    branches: [windows-compat]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install test dependencies
+        run: |
+          python --version
+          python -m venv .venv
+          .venv\Scripts\python.exe -m pip install --quiet -r requirements-dev.txt
+
+      - name: Doctor
+        run: .venv\Scripts\python.exe scripts\doctor.py
+
+      - name: Test
+        run: |
+          $py = ".venv\Scripts\python.exe"
+          $env:PYTHONPATH = "scripts"
+          & $py -m unittest discover -s tests; if ($LASTEXITCODE) { exit 1 }
+          $env:PYTHONPATH = "scripts;parallel_corpus"
+          & $py -m unittest discover -s parallel_corpus/tests -t parallel_corpus/tests; if ($LASTEXITCODE) { exit 1 }
+          $env:PYTHONPATH = "scripts;inventories"
+          & $py -m unittest discover -s inventories/tests -t inventories/tests; if ($LASTEXITCODE) { exit 1 }
+          $env:PYTHONPATH = "scripts;analyzer"
+          & $py -m unittest discover -s analyzer/tests -t analyzer/tests; if ($LASTEXITCODE) { exit 1 }
+          node --test (Get-ChildItem tests\*.test.mjs).FullName; if ($LASTEXITCODE) { exit 1 }
+
+      - name: Build the site data
+        run: |
+          python scripts\build_site.py
+          git diff --stat -- site/data/dicts.json
+          git diff --quiet -- site/data/dicts.json; if ($LASTEXITCODE) { Write-Error "dicts.json differs from the committed build"; exit 1 }

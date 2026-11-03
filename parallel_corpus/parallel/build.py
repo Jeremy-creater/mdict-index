@@ -192,8 +192,8 @@ def main() -> None:
     ap.add_argument("--out", type=Path, default=PARALLEL / "parallel.db")
     ap.add_argument("--allow-unaudited", action="store_true")
     args = ap.parse_args()
-    audit = json.loads(args.audit.read_text()) if args.audit.exists() else {}
-    summary = build(json.loads(args.selected.read_text()), PARALLEL / "staged", audit, args.out, args.allow_unaudited)
+    audit = json.loads(args.audit.read_text(encoding="utf-8")) if args.audit.exists() else {}
+    summary = build(json.loads(args.selected.read_text(encoding="utf-8")), PARALLEL / "staged", audit, args.out, args.allow_unaudited)
     print(json.dumps(summary), "->", args.out, file=sys.stderr)
 
 

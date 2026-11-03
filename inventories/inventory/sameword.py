@@ -135,7 +135,7 @@ def definitions(words: set[str]) -> dict[str, dict[str, list[str]]]:
 
 
 def ask(question: str, state: str) -> float | None:
-    done = subprocess.run(["jev", "noul", question, "--state", state], capture_output=True, text=True, timeout=90)
+    done = subprocess.run(["jev", "noul", question, "--state", state], capture_output=True, text=True, timeout=90, encoding="utf-8")
     if done.returncode != 0:
         raise RuntimeError(f"jev failed: {done.stderr.strip()[:200]}")
     return float(done.stdout.split()[-1])
@@ -179,7 +179,7 @@ def record(con: sqlite3.Connection, unasked: int, questions: int, shared: int) -
 
 def sample(states: dict[int, str], samples_path: Path) -> dict[str, float]:
     """SAMPLES answers to each question for every contrast, asking only the ones not yet kept."""
-    samples: dict[str, float] = json.loads(samples_path.read_text()) if samples_path.exists() else {}
+    samples: dict[str, float] = json.loads(samples_path.read_text(encoding="utf-8")) if samples_path.exists() else {}
     if shutil.which("jev") is None:
         sys.exit("--export-answers asks jev, which is not installed")
     try:
@@ -190,7 +190,7 @@ def sample(states: dict[int, str], samples_path: Path) -> dict[str, float]:
                 sys.exit(f"{len(failures)} of {len(todo)} questions failed (the other answers are kept; run again):\n"
                          + "\n".join(failures[:10]))
     finally:  # answers already paid for are kept even when a question fails
-        samples_path.write_text(json.dumps(samples, ensure_ascii=False))
+        samples_path.write_text(json.dumps(samples, ensure_ascii=False), encoding="utf-8")
     return samples
 
 
@@ -203,7 +203,7 @@ def main() -> None:
     args = ap.parse_args()
     db = DATA / "pronunciations.db"
     cache_path = DATA / "sameword_cache.json"
-    cache: dict[str, float] = json.loads(cache_path.read_text()) if cache_path.exists() else {}
+    cache: dict[str, float] = json.loads(cache_path.read_text(encoding="utf-8")) if cache_path.exists() else {}
     con = sqlite3.connect(db)
     rows = con.execute("SELECT rowid, word, pos_a, pos_b FROM pos_contrast").fetchall()
     defs = definitions({r[1] for r in rows})
@@ -221,7 +221,7 @@ def main() -> None:
     try:
         failures = ask_all(todo, cache)
     finally:  # answers already paid for are kept even when a question fails
-        cache_path.write_text(json.dumps(cache, ensure_ascii=False))
+        cache_path.write_text(json.dumps(cache, ensure_ascii=False), encoding="utf-8")
     if failures:
         sys.exit(f"{len(failures)} of {len(todo)} questions failed (the other answers are cached; run again):\n"
                  + "\n".join(failures[:10]))

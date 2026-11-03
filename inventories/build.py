@@ -73,7 +73,7 @@ def main() -> None:
         cmd = command(step, args.without_jev)
         print(f"== {step}: {' '.join(cmd[1:])}", file=sys.stderr, flush=True)
         if not args.dry_run:
-            subprocess.run(cmd, cwd=ROOT, check=True, env={**os.environ, "PYTHONPATH": "scripts:inventories"})
+            subprocess.run(cmd, cwd=ROOT, check=True, env={**os.environ, "PYTHONPATH": os.pathsep.join(["scripts", "inventories"])})
 
 
 if __name__ == "__main__":

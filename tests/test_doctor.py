@@ -20,7 +20,7 @@ class Checks(unittest.TestCase):
             req = Path(tmp) / "requirements.txt"
             req.write_text("# comment\nlxml==6.1.3\ntqdm==4.70.1  # pinned\nxxhash==4.0.1\n"
                            "en_core_web_sm @ https://example.org/en_core_web_sm-3.8.0-py3-none-any.whl\n"
-                           "old_model @ https://example.org/old_model-1.0.0-py3-none-any.whl\n")
+                           "old_model @ https://example.org/old_model-1.0.0-py3-none-any.whl\n", encoding="utf-8")
             installed = {"lxml": "6.1.3", "tqdm": "4.67.2", "en_core_web_sm": "3.8.0", "old_model": "0.9.0"}
 
             def version(name):

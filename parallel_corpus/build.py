@@ -50,7 +50,7 @@ def main() -> None:
     for name, cmd in plan(args.start, args.only):
         print(f"== {name}: {' '.join(cmd[1:])}", file=sys.stderr, flush=True)
         if not args.dry_run:
-            subprocess.run(cmd, cwd=ROOT, check=True, env={**os.environ, "PYTHONPATH": "scripts:parallel_corpus"})
+            subprocess.run(cmd, cwd=ROOT, check=True, env={**os.environ, "PYTHONPATH": os.pathsep.join(["scripts", "parallel_corpus"])})
 
 
 if __name__ == "__main__":

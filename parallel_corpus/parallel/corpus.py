@@ -175,7 +175,7 @@ MIN_RATIO, MAX_RATIO = 0.3, 6.0
 
 @lru_cache(maxsize=1)
 def _t2s() -> dict[int, str]:
-    table = json.loads((ROOT / "site" / "t2s.json").read_text())
+    table = json.loads((ROOT / "site" / "t2s.json").read_text(encoding="utf-8"))
     return {ord(k): v for k, v in table.items()}
 
 

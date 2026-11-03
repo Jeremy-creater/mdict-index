@@ -146,7 +146,7 @@ def file_url(folder: str, name: str) -> str:
 
 
 def candidates() -> list[dict]:
-    dicts = json.loads((ROOT / "site" / "data" / "dicts.json").read_text())
+    dicts = json.loads((ROOT / "site" / "data" / "dicts.json").read_text(encoding="utf-8"))
     out = []
     for d in dicts:
         if d["k"] != "mdx":
@@ -184,10 +184,10 @@ def _journal_rows(journal: Path) -> list[dict]:
     off, and that dictionary is probed again."""
     if not journal.exists():
         return []
-    text = journal.read_text()
+    text = journal.read_text(encoding="utf-8")
     whole = text[:text.rfind("\n") + 1]
     if whole != text:
-        journal.write_text(whole)
+        journal.write_text(whole, encoding="utf-8")
     return [json.loads(line) for line in whole.splitlines()]
 
 
@@ -209,13 +209,13 @@ def main() -> None:
     from parallel.lexicon import _lexicon
     lexicon = _lexicon()  # loaded once, shared by the workers; first, so a missing one changes nothing
     args.out.parent.mkdir(parents=True, exist_ok=True)
-    previous = [json.loads(line) for line in args.out.read_text().splitlines()] if args.out.exists() else []
+    previous = [json.loads(line) for line in args.out.read_text(encoding="utf-8").splitlines()] if args.out.exists() else []
     index = candidates()
     previous, stale = current_rows(previous, {c["id"] for c in index})
     if stale:
         print(f"{len(stale)} earlier results dropped: their ids are no longer in the index "
               f"(re-identified or removed), e.g. {stale[0]['name'][:60]}", file=sys.stderr)
-    redo = set(json.loads(args.redo.read_text())) if args.redo else set()
+    redo = set(json.loads(args.redo.read_text(encoding="utf-8"))) if args.redo else set()
     # Results go to a journal beside the output, which is replaced once, when every probe is in:
     # a row asked for again stays until its replacement and all the others exist, and a run that
     # fails or is stopped loses nothing (the next one continues from the journal).
@@ -224,7 +224,7 @@ def main() -> None:
     done = ({r["id"] for r in previous} - again) | {r["id"] for r in _journal_rows(journal)}
     todo = [c for c in index if c["id"] not in done]
     print(f"{len(done)} already probed, {len(todo)} to go", file=sys.stderr)
-    with ThreadPoolExecutor(args.jobs) as pool, journal.open("a") as out:
+    with ThreadPoolExecutor(args.jobs) as pool, journal.open("a", encoding="utf-8") as out:
         futures = [pool.submit(run_one, c, args.blocks, lexicon) for c in todo]
         for i, fut in enumerate(as_completed(futures), 1):
             r = fut.result()
@@ -237,7 +237,7 @@ def main() -> None:
     tmp = args.out.with_name(f"{args.out.name}.{uuid.uuid4().hex}.part")
     try:
         tmp.write_text("".join(json.dumps(r, ensure_ascii=False) + "\n"
-                               for r in [*(r for r in previous if r["id"] not in replaced), *new]))
+                               for r in [*(r for r in previous if r["id"] not in replaced), *new]), encoding="utf-8")
         tmp.replace(args.out)
     except BaseException:
         tmp.unlink(missing_ok=True)

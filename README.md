@@ -48,6 +48,22 @@ python3 scripts/build_site.py
 python3 -m http.server -d site 8000               # open http://localhost:8000
 ```
 
+## Windows
+
+The tools run on Windows too (the test suites run there, but the full dictionary builds have
+not yet been run end to end on Windows), with three differences: the project's Python is
+`.venv\Scripts\python.exe`, `PYTHONPATH` entries are separated by `;` instead of `:`, and in
+PowerShell a variable is set on its own line before the command. For example:
+
+```powershell
+python -m venv .venv; .venv\Scripts\python.exe -m pip install -r requirements-dev.txt
+$env:PYTHONPATH = "scripts;inventories"
+.venv\Scripts\python.exe -m unittest discover -s inventories/tests -t inventories/tests
+```
+
+Every text file is read and written as UTF-8 whatever the system's locale encoding, and
+`.github/workflows/windows.yml` runs the test suites on Windows.
+
 ## Tests
 
 ```sh

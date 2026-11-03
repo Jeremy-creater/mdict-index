@@ -130,7 +130,7 @@ def assets(folder: Path, suffix: str, linked: dict[str, None] | None = None) -> 
     files = [p for p in sorted(folder.iterdir()) if p.suffix.lower() == suffix]
     by_name = {p.name.lower(): p for p in files}
     chosen = [by_name[n] for n in (linked or {}) if n in by_name] or files
-    return "\n".join(f"/* {p.name} */\n" + p.read_text(errors="replace") for p in chosen)
+    return "\n".join(f"/* {p.name} */\n" + p.read_text(errors="replace", encoding="utf-8") for p in chosen)
 
 
 def load(conn: sqlite3.Connection, dict_id: int, item: dict, category: str, record: dict, expected: dict,
@@ -247,9 +247,9 @@ def main() -> None:
     ap.add_argument("--out", type=Path, default=CORPUS / "unified.db")
     ap.add_argument("--workers", type=int, default=max(1, (os.cpu_count() or 2) - 2))
     args = ap.parse_args()
-    report = json.loads((CORPUS / "_inspect" / "report.json").read_text())
-    dicts = {d["id"]: d for d in json.loads((ROOT / "site/data/dicts.json").read_text())}
-    rec = json.loads((ROOT / "site/data/recommended.json").read_text())
+    report = json.loads((CORPUS / "_inspect" / "report.json").read_text(encoding="utf-8"))
+    dicts = {d["id"]: d for d in json.loads((ROOT / "site/data/dicts.json").read_text(encoding="utf-8"))}
+    rec = json.loads((ROOT / "site/data/recommended.json").read_text(encoding="utf-8"))
     picks = [(cat["key"], item) for cat in rec["categories"] for item in cat["items"] if item["id"] is not None]
     plan = [Source(dict_id, item, category, dicts[item["id"]], report[item["key"]]["mdx"][0], CORPUS / item["key"])
             for dict_id, (category, item) in enumerate(picks, start=1)]

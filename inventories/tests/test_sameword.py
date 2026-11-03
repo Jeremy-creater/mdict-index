@@ -86,11 +86,11 @@ class SharedAnswers(unittest.TestCase):
     def test_answers_to_other_questions_are_not_used(self):
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "a.json"
-            path.write_text(json.dumps({"questions": "something else", "samples": 3, "answers": {"ab": [0.9, 0.1]}}))
+            path.write_text(json.dumps({"questions": "something else", "samples": 3, "answers": {"ab": [0.9, 0.1]}}), encoding="utf-8")
             self.assertEqual(load_shared(path), {})
 
     def test_the_committed_answers_are_well_formed(self):
-        doc = json.loads(ANSWERS.read_text())
+        doc = json.loads(ANSWERS.read_text(encoding="utf-8"))
         self.assertEqual(doc["questions"], questions_version())
         self.assertGreaterEqual(doc["samples"], 3)
         self.assertGreater(len(doc["answers"]), 500)

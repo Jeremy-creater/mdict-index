@@ -161,16 +161,16 @@ class Styled(unittest.TestCase):
         from parallel.extract import learn_styles, stage, styled_pairs
         learned = learn_styles(self.dir / "d.mdx", self.truth)
         self.assertEqual(stage(styled_pairs(self.dir / "d.mdx", learned), self.dir / "d.jsonl.gz", learned), 30)
-        with gzip.open(self.dir / "d.jsonl.gz", "rt") as f:
+        with gzip.open(self.dir / "d.jsonl.gz", "rt", encoding="utf-8") as f:
             self.assertTrue(all(json.loads(line)["en"].startswith("The piper") for line in f))  # no definitions
-        self.assertEqual(json.loads((self.dir / "d.styles.json").read_text()),
+        self.assertEqual(json.loads((self.dir / "d.styles.json").read_text(encoding="utf-8")),
                          {"font#teal": {"example_hits": 30, "definition_hits": 0}})
 
     def test_a_failed_restaging_keeps_the_styles_of_the_records_it_keeps(self):
         from unittest import mock
         from parallel.extract import learn_styles, stage, styled_pairs
         styles, out = self.dir / "d.styles.json", self.dir / "d.jsonl.gz"
-        styles.write_text('{"old": {}}\n')
+        styles.write_text('{"old": {}}\n', encoding="utf-8")
         out.write_bytes(b"old records")
         learned = learn_styles(self.dir / "d.mdx", self.truth)
         calls = []
@@ -182,7 +182,7 @@ class Styled(unittest.TestCase):
             return [("The piper played.", "风笛手吹了。")]
         with mock.patch("parallel.styled.pairs", failing), self.assertRaises(RuntimeError):
             stage(styled_pairs(self.dir / "d.mdx", learned), out, learned)
-        self.assertEqual((styles.read_text(), out.read_bytes()), ('{"old": {}}\n', b"old records"))
+        self.assertEqual((styles.read_text(encoding="utf-8"), out.read_bytes()), ('{"old": {}}\n', b"old records"))
         self.assertEqual(sorted(p.name for p in self.dir.glob("d.*")), ["d.jsonl.gz", "d.mdx", "d.styles.json"])
 
     def test_a_failed_publication_never_leaves_one_runs_styles_beside_anothers_records(self):
@@ -193,7 +193,7 @@ class Styled(unittest.TestCase):
         learned = learn_styles(self.dir / "d.mdx", self.truth)
         real = os.replace
         for failing, records in ((".jsonl.gz", b"old records"), (".styles.json", None)):
-            styles.write_text('{"old": {}}\n')
+            styles.write_text('{"old": {}}\n', encoding="utf-8")
             out.write_bytes(b"old records")
 
             def replace(src, dst):
@@ -215,7 +215,7 @@ class Styled(unittest.TestCase):
         from unittest import mock
         from parallel.extract import stage
         styles, out = self.dir / "d.styles.json", self.dir / "d.jsonl.gz"
-        styles.write_text('{"old": {}}\n')
+        styles.write_text('{"old": {}}\n', encoding="utf-8")
         out.write_bytes(b"old records")
         real = os.replace
         b_done = threading.Event()
@@ -242,14 +242,14 @@ class Styled(unittest.TestCase):
             stage(iter([{"en": "A", "zh": "甲", "hw": "a"}]), out, {"font#a": (20, 0)})
         b.join(10)
         self.assertEqual(b_errors, [])
-        self.assertEqual([json.loads(line)["en"] for line in gzip.open(out, "rt")], ["B"])
-        self.assertEqual(list(json.loads(styles.read_text())), ["font#b"])
+        self.assertEqual([json.loads(line)["en"] for line in gzip.open(out, "rt", encoding="utf-8")], ["B"])
+        self.assertEqual(list(json.loads(styles.read_text(encoding="utf-8"))), ["font#b"])
         self.assertEqual(sorted(p.name for p in self.dir.glob("d.*")), ["d.jsonl.gz", "d.mdx", "d.styles.json"])
 
     def test_records_extracted_without_styles_have_no_styles_file(self):
         from parallel.extract import stage
         styles, out = self.dir / "d.styles.json", self.dir / "d.jsonl.gz"
-        styles.write_text('{"old": {}}\n')
+        styles.write_text('{"old": {}}\n', encoding="utf-8")
         stage(iter([{"en": "A", "zh": "甲", "hw": "a"}]), out)
         self.assertFalse(styles.exists())
 
@@ -257,7 +257,7 @@ class Styled(unittest.TestCase):
         from unittest import mock
         from parallel.extract import learn_styles, stage, styled_pairs
         styles, out = self.dir / "d.styles.json", self.dir / "d.jsonl.gz"
-        styles.write_text('{"old": {}}\n')
+        styles.write_text('{"old": {}}\n', encoding="utf-8")
         out.write_bytes(b"old records")
         learned = learn_styles(self.dir / "d.mdx", self.truth)
         real = gzip.GzipFile.close
@@ -267,7 +267,7 @@ class Styled(unittest.TestCase):
             raise OSError("the disk is full")
         with mock.patch.object(gzip.GzipFile, "close", close), self.assertRaises(OSError):
             stage(styled_pairs(self.dir / "d.mdx", learned), out, learned)
-        self.assertEqual((styles.read_text(), out.read_bytes()), ('{"old": {}}\n', b"old records"))
+        self.assertEqual((styles.read_text(encoding="utf-8"), out.read_bytes()), ('{"old": {}}\n', b"old records"))
         self.assertEqual(sorted(p.name for p in self.dir.glob("d.*")), ["d.jsonl.gz", "d.mdx", "d.styles.json"])
 
     def test_the_dictionary_is_streamed_not_held_in_memory(self):
@@ -323,7 +323,7 @@ class Stage(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             out = Path(tmp) / "staged" / "d1.jsonl.gz"
             self.assertEqual(stage(iter([{"en": "Morning, Pip, all well?", "zh": "早，皮普，一切都好吗？", "hw": "hello"}]), out), 1)
-            with gzip.open(out, "rt") as f:
+            with gzip.open(out, "rt", encoding="utf-8") as f:
                 self.assertEqual(json.loads(f.readline())["zh"], "早，皮普，一切都好吗？")
 
             def broken():
@@ -331,7 +331,7 @@ class Stage(unittest.TestCase):
                 raise RuntimeError("extractor failed")
             with self.assertRaises(RuntimeError):
                 stage(broken(), out)
-            with gzip.open(out, "rt") as f:  # the previous good file is untouched
+            with gzip.open(out, "rt", encoding="utf-8") as f:  # the previous good file is untouched
                 self.assertEqual(len(f.readlines()), 1)
             self.assertEqual(sorted(p.name for p in out.parent.iterdir()), [".d1.lock", "d1.jsonl.gz"])  # no partial file left; the lock stays
 
